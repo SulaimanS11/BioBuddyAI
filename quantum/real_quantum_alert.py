@@ -1,5 +1,6 @@
 from qiskit import QuantumCircuit, Aer, execute
 import numpy as np
+from qiskit.visualization import plot_histogram
 
 def real_quantum_decision(confidence: float) -> str:
     # Confidence ∈ [0, 1] → angle θ ∈ [0, π/2]
@@ -15,6 +16,11 @@ def real_quantum_decision(confidence: float) -> str:
     simulator = Aer.get_backend('qasm_simulator')
     result = execute(qc, simulator, shots=100).result()
     counts = result.get_counts()
+    
+
+    # Save quantum decision histogram
+    plot_histogram(counts).savefig("output/quantum_decision_histogram.png")
+
 
     prob_danger = counts.get('1', 0) / 100.0
 
