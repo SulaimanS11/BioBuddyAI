@@ -1,26 +1,19 @@
-from qiskit import QuantumCircuit, Aer, execute
+from qiskit import QuantumCircuit, transpile
+from qiskit_aer import Aer
 import numpy as np
-from qiskit.visualization import plot_histogram
 
 def real_quantum_decision(confidence: float) -> str:
-    # Confidence ∈ [0, 1] → angle θ ∈ [0, π/2]
     theta = confidence * (np.pi / 2)
     qc = QuantumCircuit(2, 1)
-
-    # Encode confidence level in a rotation
     qc.ry(theta, 0)
     qc.cx(0, 1)
     qc.measure(1, 0)
 
-    # Use the Qiskit simulator
-    simulator = Aer.get_backend('qasm_simulator')
-    result = execute(qc, simulator, shots=100).result()
+    backend = Aer.get_backend("qasm_simulator")
+    transpiled = transpile(qc, backend)
+    job = backend.run(transpiled, shots=100)
+    result = job.result()
     counts = result.get_counts()
-    
-
-    # Save quantum decision histogram
-    plot_histogram(counts).savefig("output/quantum_decision_histogram.png")
-
 
     prob_danger = counts.get('1', 0) / 100.0
 
@@ -30,7 +23,7 @@ def real_quantum_decision(confidence: float) -> str:
         return "MODERATE THREAT"
     else:
         return "LOW/NO THREAT"
-    
-    #------------Description on what it actually does ------------
+
+    #------------tldr description on what it actually does (im too lazy but whatever) ------------
     # This function uses a quantum circuit to make a decision based on the confidence level.
     # It uses entanglement and actual qubit measurements to decide danger level.
