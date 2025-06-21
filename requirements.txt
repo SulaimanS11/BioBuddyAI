@@ -8,5 +8,5 @@ vosk==0.3.44
 sounddevice==0.4.6
 qiskit==1.0.2
 pyttsx3==2.90
-
+scipy==1.11.4
 
