@@ -6,4 +6,6 @@ matplotlib==3.8.4
 opencv-python==4.9.0.80
 vosk==0.3.44
 sounddevice==0.4.6
+qiskit==1.0.2
+
 
