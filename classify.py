@@ -6,6 +6,15 @@ from cnn_model import PoisonNet
 
 from quantum.real_quantum_alert import real_quantum_decision
 from voice.text_to_speech import speak
+import csv
+from datetime import datetime
+
+def log_detection(item_type, verdict, threat):
+    with open("output/detections.csv", mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([datetime.now(), item_type, verdict, threat])
+
+    print(f"Detection logged: {item_type}, {verdict}, {threat}")
 
 def classify_image(image_path):
     # Transform the image

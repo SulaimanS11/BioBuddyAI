@@ -1,0 +1,29 @@
+{
+  "eastern massasauga": {
+    "type": "snake",
+    "poisonous": true,
+    "facts": [
+      "It is Ontario’s only venomous snake.",
+      "It is shy and avoids humans.",
+      "Bites are rare and rarely fatal with treatment."
+    ]
+  },
+  "eastern hognose": {
+    "type": "snake",
+    "poisonous": false,
+    "facts": [
+      "It is known for its distinctive upturned snout.",
+      "It plays dead when threatened.",
+      "It can mimic a rattlesnake by flattening its neck."
+    ]
+  },
+  "garter snake": {
+    "type": "snake",
+    "poisonous": false,
+    "facts": [
+      "It is one of the most common snakes in Ontario.",
+      "It can be found in a variety of habitats.",
+      "It feeds on small rodents, amphibians, and insects."
+    ]
+  }
+}
