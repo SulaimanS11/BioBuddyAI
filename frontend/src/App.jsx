@@ -1,4 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import Navbar from "/src/components/Navbar.jsx";
 import HomePage from './pages/HomePage'
 import MainPage from './pages/MainPage'
@@ -11,6 +12,13 @@ import './App.css'
 function App() {
   const location = useLocation()
   const isEntryPage = location.pathname === '/'
+
+  useEffect(() => {
+    // Reset body opacity after the entry page transition
+    if (location.pathname !== '/') {
+      document.body.style.opacity = '1'
+    }
+  }, [location])
 
   return (
     <div className="app">

@@ -4,8 +4,9 @@ import '../App.css'
 const Navbar = () => {
   return (
     <nav className="navbar">
-      <Link to="/" className="logo">BioBuddy</Link>
+      <Link to="/main" className="logo">BioBuddy</Link>
       <div className="nav-links">
+        <Link to="/main">Home</Link>
         <Link to="/about">Who We Are</Link>
         <Link to="/mission">Our Mission</Link>
         <Link to="/technology">Technology</Link>
