@@ -1,5 +1,6 @@
 ## BioBuddyAI
 
+### Notes for now: 
 **1. Train the Model**
 
 Run this command from the root of your project:
