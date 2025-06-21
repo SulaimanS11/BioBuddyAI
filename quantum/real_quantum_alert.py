@@ -1,6 +1,8 @@
 from qiskit import QuantumCircuit, transpile
+from qiskit.visualization import plot_histogram
 from qiskit_aer import Aer
 import numpy as np
+import os
 
 def real_quantum_decision(confidence: float) -> str:
     theta = confidence * (np.pi / 2)
@@ -14,6 +16,13 @@ def real_quantum_decision(confidence: float) -> str:
     job = backend.run(transpiled, shots=100)
     result = job.result()
     counts = result.get_counts()
+
+     # Plot and save histogram for judges to see
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)  # create folder if not exists
+    plot_histogram(counts).savefig(os.path.join(output_dir, "quantum_decision_histogram.png"))
+    
+
 
     prob_danger = counts.get('1', 0) / 100.0
 
