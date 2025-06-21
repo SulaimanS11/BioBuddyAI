@@ -29,8 +29,8 @@ python main.py
 ### Steps to use for judging:
 
 1. Say: “Eastern Massasauga”
-2. Pi scans a plant/snake
-3. Pi says: “This is Poisonous. Critical Threat. Stay away.”
+2. Pi scans a plant/snake using open cv
+3. Pi says: “This is Poisonous. Critical Threat. Stay away.” using quantum networks!
 4. Print/Show histogram
 5. Show logging dashboard or heatmap
 6. Ask it: “Tell me more” → it speaks fun facts from `plant-snake-facts.json`
