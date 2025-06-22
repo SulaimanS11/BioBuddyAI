@@ -8,6 +8,9 @@ from quantum.real_quantum_alert import real_quantum_decision
 from voice.text_to_speech import speak
 import csv
 from datetime import datetime
+from cnn_model import SnakeNet
+# The following logic should be inside a function, not at the top level.
+# Consider moving this code into the classify_image function or another function as appropriate.
 
 def log_detection(item_type, verdict, threat):
     with open("output/detections.csv", mode='a', newline='') as file:
@@ -26,8 +29,9 @@ def classify_image(image_path):
     image = transform(image).unsqueeze(0)
 
     # Load the model
-    model = PoisonNet()
-    model.load_state_dict(torch.load("poison_model.pth"))
+
+    model = SnakeNet()
+    model.load_state_dict(torch.load("snake_model.pth", map_location=torch.device("cpu")))
     model.eval()
 
     # Predict
