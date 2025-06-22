@@ -1,21 +1,37 @@
-import cv2
-import torch
-import csv
 import os
-from torchvision import transforms
+import cv2
+import csv
+import time
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
 from PIL import Image
 from datetime import datetime
-import time
-import matplotlib.pyplot as plt
-
+from torchvision import transforms
 from cnn_snake import SnakeNet
+from qiskit import QuantumCircuit, transpile
+from qiskit_aer import AerSimulator
 
-# === Set up model ===
+# === Preprocess Frame ===
+def preprocess_frame(frame):
+    # Resize + Histogram Equalization (YUV)
+    img_yuv = cv2.cvtColor(frame, cv2.COLOR_BGR2YUV)
+    img_yuv[:, :, 0] = cv2.equalizeHist(img_yuv[:, :, 0])
+    frame_eq = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+
+    # CLAHE on LAB
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    lab = cv2.cvtColor(frame_eq, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    l2 = clahe.apply(l)
+    enhanced = cv2.merge((l2, a, b))
+    return cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
+
+# === Load Model ===
 model = SnakeNet()
 model.load_state_dict(torch.load("snake_model.pth", map_location="cpu"))
 model.eval()
 
-# === Transform ===
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -23,20 +39,15 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-# === CSV Setup ===
+# === Setup CSV Logging ===
 os.makedirs("outputs", exist_ok=True)
 csv_path = os.path.join("outputs", "detections.csv")
-
-# Create CSV with header if not exists
 if not os.path.exists(csv_path):
-    with open(csv_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Timestamp", "Species", "Threat Level", "Response Time (s)"])
+    with open(csv_path, mode='w', newline='') as f:
+        csv.writer(f).writerow(["Timestamp", "Species", "Threat Level", "Response Time (s)"])
 
-# === Webcam Capture ===
+# === Initialize Webcam ===
 cap = cv2.VideoCapture(0)
-
-frame_counter = 0
 detections_summary = []
 
 while True:
@@ -45,31 +56,41 @@ while True:
     if not ret:
         break
 
+    frame = preprocess_frame(frame)
     img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     img_pil = Image.fromarray(img_rgb)
-    img_tensor = transform(img_pil).unsqueeze(0)
+    tensor = transform(img_pil).unsqueeze(0)
 
-    # Predict
     with torch.no_grad():
-        output = model(img_tensor)
-        prob = torch.softmax(output, dim=1)[0, 1].item()
-        label = "Venomous" if prob > 0.5 else "Non-venomous"
+        out = model(tensor)
+        prob = torch.softmax(out, dim=1)[0, 1].item()
+        theta = prob * (np.pi / 2)
 
-    end_time = time.time()
-    response_time = round(end_time - start_time, 3)
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # === Quantum Probability Smoothing ===
+        simulator = AerSimulator()
+        qc = QuantumCircuit(1, 1)
+        qc.ry(theta, 0)
+        qc.measure(0, 0)
+        job = simulator.run(transpile(qc, simulator))
+        result = job.result()
+        counts = result.get_counts(qc)
+        quantum_prob = counts.get('1', 0) / sum(counts.values())
 
-    # Log to CSV
-    with open(csv_path, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([timestamp, label, f"{prob:.2f}", response_time])
+        label = "Venomous" if quantum_prob > 0.5 else "Non-venomous"
+        end_time = time.time()
+        response_time = round(end_time - start_time, 3)
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Store for PNG summary
+    # === Log to CSV ===
+    with open(csv_path, mode='a', newline='') as f:
+        csv.writer(f).writerow([timestamp, label, f"{prob:.2f}", response_time])
+
     detections_summary.append((timestamp, label, prob, response_time))
 
-    # Display live
+    # === Live Feedback ===
+    color = (0, 255, 0) if label == "Non-venomous" else (0, 0, 255)
     cv2.putText(frame, f"{label} ({prob:.2f})", (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0) if label == "Non-venomous" else (0, 0, 255), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
     cv2.imshow("Snake Detection", frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -78,9 +99,9 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 
-# === Generate Summary PNG ===
+# === Create PNG Summary ===
 species = [x[1] for x in detections_summary]
-times = [x[0][-8:] for x in detections_summary]  # Just HH:MM:SS
+times = [x[0][-8:] for x in detections_summary]
 probs = [x[2] for x in detections_summary]
 responses = [x[3] for x in detections_summary]
 
@@ -93,6 +114,6 @@ plt.title("Live Detection Summary")
 plt.legend()
 plt.tight_layout()
 
-summary_png_path = os.path.join("outputs", "detection_summary.png")
-plt.savefig(summary_png_path)
-print(f"✅ Summary PNG saved to {summary_png_path}")
+png_path = os.path.join("outputs", "detection_summary.png")
+plt.savefig(png_path)
+print(f"✅ Summary PNG saved to {png_path}")
