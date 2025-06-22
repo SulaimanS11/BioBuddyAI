@@ -21,8 +21,8 @@ def real_quantum_decision(confidence: float) -> str:
     output_dir = "output"
     os.makedirs(output_dir, exist_ok=True)  # create folder if not exists
     plot_histogram(counts).savefig(os.path.join(output_dir, "quantum_decision_histogram.png"))
+    print(f"Quantum decision histogram saved to {output_dir}/quantum_decision_histogram.png")
     
-
 
     prob_danger = counts.get('1', 0) / 100.0
 
