@@ -14,7 +14,7 @@ import numpy as np
 from cam.feature_utils import extract_features, cosine_similarity
 from cnn_snake import SnakeNet  # Your model
 
-from picamera2 import Picamera2
+
 
 # === Setup ===
 
@@ -60,25 +60,23 @@ if not os.path.exists(csv_path):
         writer = csv.writer(f)
         writer.writerow(["Timestamp", "Label", "Adjusted Score", "Response Time (s)"])
 
-# Setup picamera2
-picam2 = Picamera2()
-picam2.configure(picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)}))
-picam2.set_controls({"AfMode": 1})  # Enable autofocus
-picam2.start()
-time.sleep(2)  # Camera warm-up
 
 detections_summary = []
 
-# Precomputed average features
-snake_avg_features = torch.stack(snake_features).mean(dim=0)
-human_avg_features = torch.stack(human_features).mean(dim=0)
-
 print("✅ Camera started. Press 'q' to quit.")
+cap = cv2.VideoCapture(0)
+if not cap.isOpened():
+    print("❌ Cannot open webcam.")
+    exit()
 
 while True:
     start_time = time.time()
 
-    frame = picam2.capture_array()  # RGB888 (640x480x3)
+    ret, frame = cap.read()
+    if not ret:
+        print("❌ Frame capture failed.")
+        break
+
     if frame is None:
         print("❌ Frame capture failed.")
         break
@@ -86,8 +84,8 @@ while True:
     frame_pil = Image.fromarray(frame)
     frame_features = extract_features(frame_pil)
 
-    sim_snake = cosine_similarity(frame_features, snake_avg_features)
-    sim_human = cosine_similarity(frame_features, human_avg_features)
+    sim_snake = cosine_similarity(frame_features, snake_features)
+    sim_human = cosine_similarity(frame_features, human_features)
 
     adjusted_score = sim_snake - sim_human
     label = "Snake Detected" if adjusted_score > 0.7 else "No Snake Detected / Human"

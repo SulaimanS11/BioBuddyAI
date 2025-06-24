@@ -1,5 +1,6 @@
-from cam.live_detect import start_camera
+import cv2  # Already included — fine
 from voice.voice_command import listen_command
+from cam.live_detect import start_camera
 
 def main():
     mode = input("Choose mode:\n1. Voice Command + Camera\n2. Just Image Path\n> ")
@@ -7,7 +8,6 @@ def main():
     if mode.strip() == '1':
         command = listen_command()
         print(f"You said: '{command}'")
-        # Optional: You could later match `command` to a database of known plants/snakes
         start_camera()
 
     elif mode.strip() == '2':

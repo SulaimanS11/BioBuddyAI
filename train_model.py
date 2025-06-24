@@ -1,44 +1,59 @@
+# train_model.py
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms, models
+from torchvision import datasets, transforms
+from cnn_snake import SnakeNet  # Make sure this matches your CNN definition
 from tqdm import tqdm
 
-# === Transform ===
+# === Config ===
+data_dir = "snakes"
+batch_size = 16
+num_epochs = 10
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# === Transformations ===
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225])
+    transforms.Normalize([0.485, 0.456, 0.406],
+                         [0.229, 0.224, 0.225])
 ])
 
-# === Load Dataset ===
-dataset = datasets.ImageFolder("dataset", transform=transform)
-loader = DataLoader(dataset, batch_size=16, shuffle=True)
+# === Dataset and Dataloader ===
+dataset = datasets.ImageFolder(data_dir, transform=transform)
+loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+class_names = dataset.classes  # ['Dekay brown snake', 'boa constrictor', 'copperhead']
+num_classes = len(class_names)
 
 # === Model ===
-model = models.efficientnet_b0(weights="DEFAULT")
-model.classifier[1] = nn.Linear(model.classifier[1].in_features, 2)
-model = model.to("cuda" if torch.cuda.is_available() else "cpu")
+model = SnakeNet(num_classes=num_classes)
+model = model.to(device)
 
-# === Training ===
+# === Training Setup ===
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
-for epoch in range(5):  # More epochs for better accuracy
-    loop = tqdm(loader)
-    for imgs, labels in loop:
-        imgs, labels = imgs.to("cuda"), labels.to("cuda")
-        preds = model(imgs)
-        loss = criterion(preds, labels)
-
+# === Training Loop ===
+for epoch in range(num_epochs):
+    model.train()
+    running_loss = 0.0
+    loop = tqdm(loader, desc=f"Epoch {epoch+1}/{num_epochs}")
+    for images, labels in loop:
+        images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
 
-        loop.set_description(f"Epoch [{epoch+1}/5]")
+        running_loss += loss.item()
         loop.set_postfix(loss=loss.item())
 
-# === Save Fine-Tuned Model ===
+# === Save Model and Class Labels ===
 torch.save(model.state_dict(), "snake_model.pth")
-print("✅ Model retrained with new images.")
+with open("snake_classes.txt", "w") as f:
+    f.write("\n".join(class_names))
+
+print("✅ Model trained and saved.")
+print("✅ Class labels saved to snake_classes.txt.")

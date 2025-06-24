@@ -1,51 +1,51 @@
 # classify.py
+
 import torch
 from torchvision import transforms
 from PIL import Image
-from cnn_model import PoisonNet
-
+from cnn_snake import SnakeNet
 from quantum.real_quantum_alert import real_quantum_decision
 from voice.text_to_speech import speak
 import csv
 from datetime import datetime
-from cnn_model import SnakeNet
-# The following logic should be inside a function, not at the top level.
-# Consider moving this code into the classify_image function or another function as appropriate.
 
-def log_detection(item_type, verdict, threat):
+def log_detection(snake_name, verdict, threat):
     with open("output/detections.csv", mode='a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([datetime.now(), item_type, verdict, threat])
-
-    print(f"Detection logged: {item_type}, {verdict}, {threat}")
+        writer.writerow([datetime.now(), snake_name, verdict, threat])
+    print(f"Detection logged: {snake_name}, {verdict}, {threat}")
 
 def classify_image(image_path):
-    # Transform the image
+    # === Load snake class names ===
+    with open("snake_classes.txt", "r") as f:
+        class_names = [line.strip() for line in f.readlines()]
+
+    # === Transform and prepare image ===
     transform = transforms.Compose([
-        transforms.Resize((128, 128)),
-        transforms.ToTensor()
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
     ])
-    image = Image.open(image_path)
+    image = Image.open(image_path).convert("RGB")
     image = transform(image).unsqueeze(0)
 
-    # Load the model
-
-    model = SnakeNet()
+    # === Load model ===
+    model = SnakeNet(num_classes=len(class_names))
     model.load_state_dict(torch.load("snake_model.pth", map_location=torch.device("cpu")))
     model.eval()
 
-    # Predict
-    output = model(image)
-    probs = torch.softmax(output, dim=1)
-    confidence = probs[0][0].item()  # Confidence it's poisonous (class 0)
+    # === Predict ===
+    with torch.no_grad():
+        output = model(image)
+        probs = torch.softmax(output, dim=1)[0]
+        predicted_idx = torch.argmax(probs).item()
+        confidence = probs[predicted_idx].item()
 
-    # Classification verdict
-    verdict = "Poisonous" if confidence > 0.5 else "Safe"
-
-    # Quantum threat level
+    # === Classification result ===
+    snake_name = class_names[predicted_idx]
     threat_level = real_quantum_decision(confidence)
-
-    # Speak out result
-    speak(f"The object is {verdict}. Threat level: {threat_level}.")
-
-    return f"{verdict} ({threat_level})"
+    verdict = f"{snake_name} (confidence: {confidence:.2f})"
+    speak(f"The snake is likely a {snake_name}. Threat level: {threat_level}.")
+    log_detection(snake_name, confidence, threat_level)
+    return f"{verdict} — {threat_level}"
