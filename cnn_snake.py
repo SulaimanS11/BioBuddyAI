@@ -11,7 +11,7 @@ class SnakeNet(nn.Module):
         
         # Replace classifier head to match number of classes
         in_features = self.base_model.classifier[1].in_features
-        self.base_model.classifier[1] = nn.Linear(in_features, num_classes)
+        self.base_model.classifier[1] = nn.Linear(1280, 2)
     
     def forward(self, x):
         return self.base_model(x)

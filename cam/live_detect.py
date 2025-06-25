@@ -35,13 +35,19 @@ for root, _, files in os.walk(human_folder):
     for filename in files:
         if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
             path = os.path.join(root, filename)
-            img = Image.open(path).convert('RGB')
-            vec = extract_features(img)
+            print("🖼 Found human image:", path)  # 👈 Debug print here
+            try:
+                img = Image.open(path).convert('RGB')
+                vec = extract_features(img)
+                if vec is not None and len(vec) == 512:
+                    human_features.append(vec)
+                else:
+                    print(f"⚠️ Invalid feature vector from: {path}")
+            except Exception as e:
+                print(f"❌ Error processing {path}: {e}")
 
-            if vec is not None and len(vec) == 512:
-                human_features.append(vec)
-            else:
-                print(f"⚠️ Skipped bad image: {path}")
+            print(f"✅ Loaded {len(human_features)} human feature vectors.")
+
 
 # Load SnakeNet model
 model = SnakeNet()

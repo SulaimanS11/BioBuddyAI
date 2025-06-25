@@ -16,12 +16,36 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225]),
 ])
 
-def extract_features(image: Image.Image) -> torch.Tensor:
-    input_tensor = transform(image).unsqueeze(0)
-    with torch.no_grad():
-        features = feature_extractor(input_tensor)
-    features = features.view(features.size(0), -1)
-    return features
+def extract_features(image):
+    from torchvision.models import resnet18, ResNet18_Weights
+    model = resnet18(weights=ResNet18_Weights.DEFAULT)
+    model.eval()
+
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], 
+            std=[0.229, 0.224, 0.225]
+        )
+    ])
+
+    try:
+        tensor = transform(image).unsqueeze(0)
+        with torch.no_grad():
+            features = model(tensor)
+            if features.numel() == 0:
+                print("🚫 Feature vector is empty!")
+                return None
+            if torch.all(features == 0):
+                print("🚫 Feature vector is all zeros!")
+                return None
+            print("✅ Extracted feature vector mean:", features.mean().item())
+            return features.squeeze()
+    except Exception as e:
+        print(f"❌ Exception during feature extraction: {e}")
+        return None
+
 
 def cosine_similarity(v1, v2):
     if not isinstance(v1, torch.Tensor):
