@@ -35,3 +35,10 @@ python main.py
 5. Show logging dashboard or heatmap
 6. Ask it: “Tell me more” → it speaks fun facts from `plant-snake-facts.json`
 7. Show code using Qiskit + live quantum backend
+
+
+### To train the model
+Simply run the following command in the terminal/console:
+```bash
+python train_model.py
+```
