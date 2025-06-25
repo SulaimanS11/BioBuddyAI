@@ -84,11 +84,29 @@ while True:
     frame_pil = Image.fromarray(frame)
     frame_features = extract_features(frame_pil)
 
-    sim_snake = cosine_similarity(frame_features, snake_features)
+    sims = [cosine_similarity(frame_features, vec) for vec in snake_features]
+    max_sim = max(sims)
+    best_match_index = sims.index(max_sim)
+
     sim_human = cosine_similarity(frame_features, human_features)
 
-    adjusted_score = sim_snake - sim_human
-    label = "Snake Detected" if adjusted_score > 0.7 else "No Snake Detected / Human"
+    adjusted_score = max_sim - sim_human
+    is_snake = adjusted_score > 0.7
+
+    # Load class names (once only)
+    if 'class_names' not in globals():
+        with open("snake_classes.txt", "r") as f:
+            class_names = [line.strip() for line in f.readlines()]
+
+    label = f"{class_names[best_match_index]}" if is_snake else "No Snake Detected / Human"
+
+    # Optionally call quantum threat assessment
+    from quantum.real_quantum_alert import real_quantum_decision
+    from voice.text_to_speech import speak
+
+    if is_snake:
+        threat = real_quantum_decision(max_sim)
+        speak(f"{label} detected. Threat level: {threat}.")
 
     response_time = round(time.time() - start_time, 3)
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
