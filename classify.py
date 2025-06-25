@@ -20,6 +20,13 @@ def classify_image(image_path):
     with open("snake_classes.txt", "r") as f:
         class_names = [line.strip() for line in f.readlines()]
 
+    try:
+        image = Image.open(image_path).convert("RGB")
+    except Exception as e:
+        return f"⚠️ Error loading image: {e}"
+    if image is None:
+        return "⚠️ Error: Image is None. Please check the image path."
+
     # === Transform and prepare image ===
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -49,3 +56,5 @@ def classify_image(image_path):
     speak(f"The snake is likely a {snake_name}. Threat level: {threat_level}.")
     log_detection(snake_name, confidence, threat_level)
     return f"{verdict} — {threat_level}"
+
+    
