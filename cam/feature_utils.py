@@ -23,6 +23,13 @@ def extract_features(image: Image.Image) -> torch.Tensor:
     features = features.view(features.size(0), -1)
     return features
 
-def cosine_similarity(v1: torch.Tensor, v2: torch.Tensor) -> float:
-    similarity = F.cosine_similarity(v1, v2)
-    return similarity.item()
+def cosine_similarity(v1, v2_list):
+    v1 = torch.tensor(v1, dtype=torch.float32)
+
+    similarities = []
+    for v2 in v2_list:
+        v2_tensor = torch.tensor(v2, dtype=torch.float32)
+        sim = F.cosine_similarity(v1.unsqueeze(0), v2_tensor.unsqueeze(0))
+        similarities.append(sim.item())
+    
+    return similarities # returns a list of cosine similarity scores
