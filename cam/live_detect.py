@@ -37,7 +37,11 @@ for root, _, files in os.walk(human_folder):
             path = os.path.join(root, filename)
             img = Image.open(path).convert('RGB')
             vec = extract_features(img)
-            human_features.append(vec)
+
+            if vec is not None and len(vec) == 512:
+                human_features.append(vec)
+            else:
+                print(f"⚠️ Skipped bad image: {path}")
 
 # Load SnakeNet model
 model = SnakeNet()
@@ -83,6 +87,10 @@ while True:
 
     frame_pil = Image.fromarray(frame)
     frame_features = extract_features(frame_pil)
+
+    if not human_features:
+        print("❌ No valid human features found. Skipping frame.")
+        continue  # Skip this frame if no valid human data
 
     sims = [cosine_similarity(frame_features, vec) for vec in snake_features]
     max_sim = max(sims)
