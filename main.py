@@ -7,15 +7,16 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 from cam.feature_utils import extract_features, cosine_similarity
+from cnn_snake import SnakeNet  # Your model
 
 
+##pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+##features = extract_features(pil_image, verbose=False)
 def main():
     mode = input("Choose mode:\n1. Voice Command + Camera\n2. Just Image Path\n> ")
 
     if mode.strip() == '1':
-        command = listen_command()
-        print(f"You said: '{command}'")
-        start_camera()
+        command = start_camera()
 
     elif mode.strip() == '2':
         from classify import classify_image
@@ -32,12 +33,14 @@ def start_camera():
 
     # Load known snake images
     for root, _, files in os.walk(snake_folder):
+        files += [f for f in os.listdir(snake_folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
         for filename in files:
             if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
                 path = os.path.join(root, filename)
                 try:
                     img = Image.open(path).convert('RGB')
                     vec = extract_features(img)
+                    print(f"🧪 Loaded {filename}, vector shape: {vec.shape if vec is not None else 'None'}")
                     if vec is not None and len(vec) == 512:
                         snake_features.append(vec)
                 except Exception as e:
@@ -61,6 +64,9 @@ def start_camera():
         return
 
     cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("❌ Camera could not be opened.")
+        return
     print("✅ Camera started. Press 'q' to quit.")
 
     detections = []
@@ -70,9 +76,12 @@ def start_camera():
         writer = csv.writer(f)
         writer.writerow(["Timestamp", "Label", "Score", "Response Time (s)"])
 
+    threat_history = []
+
     while True:
         start_time = time.time()
         ret, frame = cap.read()
+        print("Frame read status:", ret)
         if not ret or frame is None:
             print("❌ Frame read failed.")
             continue
@@ -86,7 +95,12 @@ def start_camera():
         sim_human = max([cosine_similarity(frame_vec, vec) for vec in human_features])
 
         adjusted_score = sim_snake - sim_human
-        label = "🐍 Snake" if adjusted_score > 0.1 else "🧍 Human"
+        label = "Snake" if adjusted_score > 0.1 else "Human"
+
+        # Add to threat history
+        threat_history.append(adjusted_score)
+        if len(threat_history) >= 3 and threat_history[-1] > threat_history[-2] > threat_history[-3]:
+            print("⚠️ Escalating threat detected!")
 
         # Log
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -121,7 +135,7 @@ def start_camera():
     plt.legend()
     plt.tight_layout()
     plt.savefig("outputs/detection_summary.png")
-    print("📊 Detection graph saved!")
+    print("Detection graph saved!")
 
 
 if __name__ == "__main__":

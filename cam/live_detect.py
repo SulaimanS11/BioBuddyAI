@@ -79,67 +79,57 @@ if not cap.isOpened():
     print("❌ Cannot open webcam.")
     exit()
 
+threat_history = []
+
 while True:
     start_time = time.time()
 
     ret, frame = cap.read()
-    if not ret:
+    if not ret or frame is None:
         print("❌ Frame capture failed.")
         break
 
-    if frame is None:
-        print("❌ Frame capture failed.")
-        break
-
-    frame_pil = Image.fromarray(frame)
+    frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     frame_features = extract_features(frame_pil)
 
-    if not human_features:
-        print("❌ No valid human features found. Skipping frame.")
-        continue  # Skip this frame if no valid human data
-
-    sims = [cosine_similarity(frame_features, vec) for vec in snake_features]
-    max_sim = max(sims)
-    best_match_index = sims.index(max_sim)
-
+    sim_snake = cosine_similarity(frame_features, snake_features)
     sim_human = cosine_similarity(frame_features, human_features)
+    adjusted_score = sim_snake - sim_human
 
-    adjusted_score = max_sim - sim_human
-    is_snake = adjusted_score > 0.7
+    label = "No Snake Detected"
+    threat = "None"
 
-    # Load class names (once only)
-    if 'class_names' not in globals():
-        with open("snake_classes.txt", "r") as f:
-            class_names = [line.strip() for line in f.readlines()]
+    if adjusted_score > 0.7:
+        # Save frame to temp file
+        temp_path = "outputs/temp_frame.jpg"
+        frame_pil.save(temp_path)
 
-    label = f"{class_names[best_match_index]}" if is_snake else "No Snake Detected / Human"
+        # Classify snake and get threat level
+        from classify import classify_image, quantum_decision
+        species, confidence = classify_image(temp_path)
+        threat = quantum_decision(species, confidence)
 
-    # Optionally call quantum threat assessment
-    from quantum.real_quantum_alert import real_quantum_decision
-    from voice.text_to_speech import speak
+        label = f"{species} ({confidence:.2f}) - {threat}"
+    else:
+        label = "No Snake Detected"
 
-    if is_snake:
-        threat = real_quantum_decision(max_sim)
-        speak(f"{label} detected. Threat level: {threat}.")
-
-    response_time = round(time.time() - start_time, 3)
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    with open(csv_path, "a", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([timestamp, label, f"{adjusted_score:.3f}", response_time])
-
-    detections_summary.append((timestamp, label, adjusted_score, response_time))
-
-    # Annotate and display
-    frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-    color = (0, 0, 255) if label == "Snake Detected" else (0, 255, 0)
-    cv2.putText(frame_bgr, f"{label} ({adjusted_score:.2f})", (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-    cv2.imshow("Snake & Human Detection", frame_bgr)
+    # Display result
+    color = (0, 0, 255) if "THREAT" in threat else (0, 255, 0)
+    cv2.putText(frame, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+    cv2.imshow("Snake Detection", frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+    threat_history.append(confidence)
+
+    if len(threat_history) >= 3 and threat_history[-1] > threat_history[-2] > threat_history[-3]:
+        print("⚠️ Escalating threat detected!")
+
+    else:
+        label = "No Snake Detected"
+
+
 
 cv2.destroyAllWindows()
 
