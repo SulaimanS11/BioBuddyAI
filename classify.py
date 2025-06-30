@@ -23,9 +23,9 @@ def classify_image(image_path):
     try:
         image = Image.open(image_path).convert("RGB")
     except Exception as e:
-        return f"⚠️ Error loading image: {e}"
+        return f"Error loading image: {e}"
     if image is None:
-        return "⚠️ Error: Image is None. Please check the image path."
+        return "Error: Image is None. Please check the image path."
 
     # === Transform and prepare image ===
     transform = transforms.Compose([

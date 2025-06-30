@@ -116,7 +116,7 @@ def start_camera():
 
         venomous_keywords = ["boa", "viper", "cobra", "rattlesnake", "copperhead"]
         if any(v in best_snake_species.lower() for v in venomous_keywords):
-            warning = f"Danger! Venomous snake detected - {best_snake_species}, take caution."
+            warning = f"Danger! Venomous snake detected - Towards your right - {best_snake_species}, remain calm and create distance, slowly back away and no sudden movements."
             print(f"🔊 {warning}")
             engine.say(warning)
             engine.runAndWait()
